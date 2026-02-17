@@ -19,7 +19,7 @@ pip install requests
 ## 使用
 
 ```bash
-python fetch_x.py <x_url>
+python fetch_x.py <x_url> [--save-md]
 ```
 
 ### 示例
@@ -30,7 +30,20 @@ python fetch_x.py "https://x.com/elonmusk/status/123456789"
 
 # 抓取 X Article 长文章
 python fetch_x.py "https://x.com/thedankoe/status/2010751592346030461"
+
+# 抓取并直接保存为 Markdown 文件
+python fetch_x.py "https://x.com/elonmusk/status/123456789" --save-md
 ```
+
+### 保存为 Markdown
+
+抓取成功后，程序会询问是否保存为 Markdown 文件：
+- 输入 `y` 或 `yes` 保存
+- 输入 `n` 或 `no` 跳过
+
+也可以使用 `--save-md` 参数直接保存，无需交互确认。
+
+生成的文件名格式：`{用户名}_{推文ID}_{时间戳}.md`
 
 ## 输出格式
 
