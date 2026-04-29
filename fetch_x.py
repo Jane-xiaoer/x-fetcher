@@ -342,6 +342,58 @@ def generate_markdown(result, tweet_id, username, url, replies=None, include_rep
     return "\n".join(lines)
 
 
+def download_videos(result, tweet_id, username):
+    """Download video/image media files referenced in result['content']['media'].
+
+    Returns list of saved file paths.
+    """
+    import os
+    from urllib.parse import urlparse, unquote
+
+    content = result.get("content", {})
+    media_list = content.get("media") or []
+    if not media_list:
+        # X Article content has no 'media' array; cover_image only.
+        cover = content.get("cover_image")
+        if cover:
+            media_list = [cover]
+    if not media_list:
+        print("⚠️ 这条推文没有视频/媒体可下载", file=sys.stderr)
+        return []
+
+    saved = []
+    for idx, media_url in enumerate(media_list, 1):
+        # Skip non-string entries defensively
+        if not isinstance(media_url, str) or not media_url.startswith("http"):
+            continue
+        # Pick extension from URL path; fall back to mp4 for video.twimg
+        path = urlparse(media_url).path
+        ext = os.path.splitext(path)[1] or ""
+        if not ext:
+            ext = ".mp4" if "video" in media_url else ".bin"
+        # Sanitize ext (strip query)
+        ext = ext.split("?")[0]
+        # Decide kind label
+        kind = "video" if (ext == ".mp4" or "video" in media_url) else "media"
+        filename = f"{username}_{tweet_id}_{kind}_{idx}{ext}"
+        print(f"⬇️  下载 {kind} {idx}/{len(media_list)}: {media_url[:80]}...", file=sys.stderr)
+        try:
+            r = requests.get(media_url, timeout=60, stream=True, verify=True)
+        except requests.exceptions.SSLError:
+            r = requests.get(media_url, timeout=60, stream=True, verify=False)
+        if r.status_code != 200:
+            print(f"  ❌ HTTP {r.status_code},跳过", file=sys.stderr)
+            continue
+        with open(filename, "wb") as f:
+            for chunk in r.iter_content(chunk_size=1 << 16):
+                if chunk:
+                    f.write(chunk)
+        size_mb = os.path.getsize(filename) / (1024 * 1024)
+        print(f"  ✅ 已保存: {filename} ({size_mb:.2f} MB)", file=sys.stderr)
+        saved.append(filename)
+    return saved
+
+
 def save_markdown(markdown_content, tweet_id, username, suffix=""):
     """保存 Markdown 文件"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -444,6 +496,7 @@ def main():
         print("  --with-replies   同时抓取评论")
         print("  --full           保存完整归档（主贴+评论）")
         print("  --json           仅输出 JSON，不保存文件")
+        print("  --save-video     下载推文里的视频/媒体到当前目录")
         print("")
         print("示例:")
         print("  python fetch_x.py https://x.com/elonmusk/status/123456789")
@@ -457,13 +510,18 @@ def main():
     with_replies = "--with-replies" in sys.argv
     full_archive = "--full" in sys.argv
     json_only = "--json" in sys.argv
+    save_video = "--save-video" in sys.argv
     
     result, tweet_id, username = fetch_tweet(url)
 
     if not result.get("success"):
         print(json.dumps(result, ensure_ascii=False, indent=2))
         sys.exit(1)
-    
+
+    # --save-video 是叠加选项,可与其它模式组合
+    if save_video:
+        download_videos(result, tweet_id, username)
+
     # 根据参数决定行为
     if json_only:
         # 仅输出 JSON

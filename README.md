@@ -46,6 +46,7 @@ python fetch_x.py <x_url> [选项]
 | `--with-replies` | 同时抓取评论 |
 | `--full` | 保存完整归档(主贴+评论) |
 | `--json` | 仅输出 JSON,不保存文件 |
+| `--save-video` 🆕 | 下载推文里的视频/媒体到当前目录(可与其它选项叠加) |
 
 #### 示例
 
@@ -64,6 +65,12 @@ python fetch_x.py "https://x.com/elonmusk/status/123456789" --full
 
 # 仅输出 JSON
 python fetch_x.py "https://x.com/elonmusk/status/123456789" --json --with-replies
+
+# 🆕 下载推文里的视频(以 {username}_{tweet_id}_video_N.mp4 命名)
+python fetch_x.py "https://x.com/zeke/status/2049348208489570771" --save-video
+
+# 视频 + 评论 + 完整归档,叠加用
+python fetch_x.py "https://x.com/elonmusk/status/123456789" --full --save-video
 ```
 
 #### 交互模式菜单
